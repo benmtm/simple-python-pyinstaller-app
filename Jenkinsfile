@@ -1,57 +1,91 @@
 pipeline {
-    agent none
+    agent none  // Tidak menggunakan agent global, akan dideklarasikan di tiap stage
     stages {
-        stage('Build') {
+        stage('Setup Environment') {
             agent {
                 docker {
-                    image 'python:2-alpine'
-                    args '--rm'
+                    image 'alpine'
+                    args '--rm' // Hapus container setelah selesai
                 }
             }
             steps {
                 sh '''
-                    apk add --no-cache gcc musl-dev
-                    python -m py_compile sources/add2vals.py sources/calc.py
+                    echo "Setting up environment..."
+                    apk add --no-cache python3 py3-pip
+                    python3 --version
                 '''
             }
         }
-        stage('Test') {
+
+        stage('Build') {
             agent {
                 docker {
-                    image 'qnib/pytest'
-                    args '--rm'
+                    image 'python:3-alpine' // Gunakan Python 3 pada Alpine
+                    args '--rm' // Hapus container setelah selesai
                 }
             }
             steps {
                 sh '''
+                    echo "Starting build..."
+                    mkdir -p build
+                    python -m py_compile sources/add2vals.py sources/calc.py
+                    echo "Build completed!"
+                '''
+            }
+        }
+
+        stage('Test') {
+            agent {
+                docker {
+                    image 'pytest/pytest' // Gunakan image pytest untuk testing
+                    args '--rm' // Hapus container setelah selesai
+                }
+            }
+            steps {
+                sh '''
+                    echo "Running tests..."
                     mkdir -p test-reports
                     py.test --verbose --junit-xml=test-reports/results.xml sources/test_calc.py
                 '''
             }
             post {
                 always {
-                    junit 'test-reports/results.xml'
+                    junit 'test-reports/results.xml' // Publikasikan hasil tes
                 }
             }
         }
+
         stage('Deliver') {
             agent {
                 docker {
-                    image 'cdrx/pyinstaller-linux:python2'
-                    args '--rm'
+                    image 'cdrx/pyinstaller-linux:python3' // Image untuk PyInstaller
+                    args '--rm' // Hapus container setelah selesai
                 }
             }
             steps {
                 sh '''
-                    mkdir -p dist
+                    echo "Packaging application..."
                     pyinstaller --onefile sources/add2vals.py
+                    echo "Packaging completed!"
                 '''
             }
             post {
                 success {
+                    echo "Archiving build artifacts..."
                     archiveArtifacts 'dist/add2vals'
                 }
             }
+        }
+    }
+    post {
+        always {
+            echo 'Pipeline execution completed!'
+        }
+        success {
+            echo 'Pipeline executed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed!'
         }
     }
 }
