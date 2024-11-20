@@ -8,10 +8,11 @@ pipeline {
                     if ! command -v docker &> /dev/null
                     then
                         echo "Docker not found, installing Docker..."
-                        apt-get update && apt-get install -y docker.io
+                        apk add --no-cache docker
                     else
                         echo "Docker is already installed"
                     fi
+                    docker --version
                 '''
             }
         }
