@@ -34,7 +34,9 @@ pipeline {
                 }
             }
             steps {
-                sh 'apk add --no-cache py-pip bash && pip install pyinstaller'  // Install pyinstaller if not available
+                // Check if pyinstaller is installed and install it using pip if necessary
+                sh 'python -m ensurepip || true'  // Ensures pip is available if not installed
+                sh 'pip install --upgrade pyinstaller'  // Install pyinstaller
                 sh 'pyinstaller --onefile sources/add2vals.py'
             }
             post {
