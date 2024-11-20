@@ -1,6 +1,21 @@
 pipeline {
     agent none  // Tidak menggunakan agent global, akan dideklarasikan di tiap stage
     stages {
+        stage('Setup Docker') {
+            steps {
+                sh '''
+                    echo "Checking if Docker is installed..."
+                    if ! command -v docker &> /dev/null
+                    then
+                        echo "Docker not found, installing Docker..."
+                        apt-get update && apt-get install -y docker.io
+                    else
+                        echo "Docker is already installed"
+                    fi
+                '''
+            }
+        }
+
         stage('Setup Environment') {
             agent {
                 docker {
